@@ -284,7 +284,9 @@ class ClipViewModel: ObservableObject {
 
         // Reject shell metacharacters that could enable command injection
         // These characters have special meaning in shells and could be dangerous
-        let dangerousChars = CharacterSet(charactersIn: ";|&$`\\!(){}<>'\"\n\r")
+        // Note: & is allowed since it's common in URL query strings and we use
+        // Process with argument arrays (not shell execution), so it's safe
+        let dangerousChars = CharacterSet(charactersIn: ";|$`\\!(){}<>'\"\n\r")
         if trimmed.rangeOfCharacter(from: dangerousChars) != nil {
             return "URL contains invalid characters"
         }
