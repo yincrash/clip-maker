@@ -1,0 +1,8 @@
+// Local developer settings
+// Copy this file to DeveloperSettings.xcconfig and fill in your values
+
+// Your Apple Developer Team ID (find in Apple Developer Portal or Xcode)
+DEVELOPMENT_TEAM = YOUR_TEAM_ID_HERE
+
+// Code signing identity (use "Apple Development" for development, "Developer ID Application" for distribution)
+CODE_SIGN_IDENTITY = Apple Development
