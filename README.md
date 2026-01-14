@@ -56,7 +56,7 @@ The app requires yt-dlp and ffmpeg to function. You have two options:
 ### Option 1: Let the app download them
 On first launch, the app will offer to download standalone binaries to its Application Support directory.
 
-### Option 2: Install via Homebrew (recommended)
+### Option 2: Install via [Homebrew](https://brew.sh/) (recommended)
 ```bash
 brew install yt-dlp ffmpeg
 ```
