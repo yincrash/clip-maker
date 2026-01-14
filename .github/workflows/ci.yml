@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Create DeveloperSettings.xcconfig
+        run: |
+          cat > "yt-dlp Clip Maker/DeveloperSettings.xcconfig" << 'EOF'
+          // CI build settings - no code signing
+          DEVELOPMENT_TEAM =
+          CODE_SIGN_IDENTITY = -
+          CODE_SIGN_STYLE = Manual
+          EOF
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project "yt-dlp Clip Maker/yt-dlp Clip Maker.xcodeproj" \
+            -scheme "yt-dlp Clip Maker" \
+            -configuration Debug \
+            -destination "platform=macOS" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Run Tests
+        run: |
+          xcodebuild test \
+            -project "yt-dlp Clip Maker/yt-dlp Clip Maker.xcodeproj" \
+            -scheme "yt-dlp Clip Maker" \
+            -destination "platform=macOS" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
