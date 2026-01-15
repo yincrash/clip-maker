@@ -16,6 +16,9 @@ env:
   SCHEME: "yt-dlp Clip Maker"
   PROJECT_PATH: "yt-dlp Clip Maker/yt-dlp Clip Maker.xcodeproj"
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     runs-on: macos-26
