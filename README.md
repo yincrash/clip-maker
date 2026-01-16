@@ -54,14 +54,14 @@ Download the latest DMG from the [Releases](https://github.com/yincrash/clip-mak
 The app requires yt-dlp and ffmpeg to function. You have two options:
 
 ### Option 1: Let the app download them
-On first launch, the app will offer to download standalone binaries to its Application Support directory.
+On first launch, the app will offer to download standalone binaries to its Application Support directory. Note that the standalone yt-dlp binary has a [slow startup time](https://github.com/yt-dlp/yt-dlp/issues/10425) due to how it's packaged.
 
 ### Option 2: Install via [Homebrew](https://brew.sh/) (recommended)
 ```bash
 brew install yt-dlp ffmpeg
 ```
 
-The app will automatically detect system-installed binaries. You can switch between app-bundled and system versions in Settings.
+The Homebrew version of yt-dlp starts much faster than the standalone binary. The app will automatically detect system-installed binaries. You can switch between app-bundled and system versions in Settings.
 
 ## Usage
 

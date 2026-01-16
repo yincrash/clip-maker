@@ -19,6 +19,9 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Install dependencies
+        run: brew install yt-dlp ffmpeg
+
       - name: Create DeveloperSettings.xcconfig
         run: |
           cat > "yt-dlp Clip Maker/DeveloperSettings.xcconfig" << 'EOF'
