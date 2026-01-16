@@ -6,6 +6,16 @@ A macOS app that creates video clips from online videos using [yt-dlp](https://g
 
 This app was created specifically for clipping long streams (VODs, livestream archives, etc.). When a stream is seekable (typically after it's finished processing by the provider), yt-dlp can download just the portion between your specified timestamps without downloading the entire video. This makes it practical to grab a 2-minute clip from a 10-hour stream.
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/app-video-loaded.png" alt="Video loaded with format selection and clip range" width="600">
+</p>
+
+<p align="center">
+  <img src="screenshots/app-vimeo-credentials.png" alt="Vimeo URL with credentials input" width="600">
+</p>
+
 ## Features
 
 - Download clips from any yt-dlp supported site (YouTube, Vimeo, etc.)
@@ -15,6 +25,7 @@ This app was created specifically for clipping long streams (VODs, livestream ar
 - Real-time console output during clip creation
 - Automatic dependency management (downloads yt-dlp and ffmpeg if needed)
 - Support for system-installed binaries via Homebrew
+- Vimeo credentials support for authenticated video access
 
 ## Requirements
 
