@@ -54,18 +54,27 @@ struct ContentView: View {
             Text("Video URL")
                 .font(.headline)
 
-            HStack {
-                TextField("Paste a link from YouTube, Vimeo, or other sites", text: $viewModel.urlInput)
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(viewModel.isLoadingFormats || viewModel.isProcessing)
-                    .onSubmit {
-                        if !viewModel.urlInput.isEmpty && !viewModel.isLoadingFormats && !viewModel.isProcessing {
-                            Task {
-                                await viewModel.loadFormats()
-                            }
+            TextField("Paste a link from YouTube, Vimeo, or other sites", text: $viewModel.urlInput)
+                .textFieldStyle(.roundedBorder)
+                .disabled(viewModel.isLoadingFormats || viewModel.isProcessing)
+                .onChange(of: viewModel.urlInput) { _, _ in
+                    viewModel.checkVimeoCredentialsPrompt()
+                }
+                .onSubmit {
+                    if !viewModel.urlInput.isEmpty && !viewModel.isLoadingFormats && !viewModel.isProcessing {
+                        Task {
+                            await viewModel.loadFormats()
                         }
                     }
+                }
 
+            // Vimeo credentials section
+            if viewModel.isVimeoURL {
+                vimeoCredentialsSection
+            }
+
+            HStack {
+                Spacer()
                 Button("Load Video") {
                     Task {
                         await viewModel.loadFormats()
@@ -84,6 +93,40 @@ struct ContentView: View {
                 }
             }
         }
+        .alert("Vimeo Login Required", isPresented: $viewModel.showVimeoCredentialsPrompt) {
+            Button("OK") {
+                viewModel.dismissVimeoCredentialsPrompt()
+            }
+        } message: {
+            Text("Most Vimeo videos require a login to download via yt-dlp. Enter your Vimeo username and password below to access the video.")
+        }
+    }
+
+    // MARK: - Vimeo Credentials Section
+
+    private var vimeoCredentialsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Vimeo Credentials")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 12) {
+                TextField("Username or Email", text: $viewModel.vimeoUsername)
+                    .textFieldStyle(.roundedBorder)
+                    .disabled(viewModel.isLoadingFormats || viewModel.isProcessing)
+
+                SecureField("Password", text: $viewModel.vimeoPassword)
+                    .textFieldStyle(.roundedBorder)
+                    .disabled(viewModel.isLoadingFormats || viewModel.isProcessing)
+            }
+
+            Text("Optional: Some public Vimeo videos may work without credentials.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(12)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .cornerRadius(8)
     }
 
     // MARK: - Video Info Section

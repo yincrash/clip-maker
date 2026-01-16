@@ -10,16 +10,30 @@ class ClipService {
     }
 
     /// Fetch video information and available formats from a URL
-    func fetchVideoInfo(url: String) async throws -> VideoInfo {
+    /// - Parameters:
+    ///   - url: The video URL to fetch info for
+    ///   - username: Optional username for sites requiring authentication (e.g., Vimeo)
+    ///   - password: Optional password for sites requiring authentication
+    func fetchVideoInfo(url: String, username: String? = nil, password: String? = nil) async throws -> VideoInfo {
         let ytDlpPath = dependencyManager.ytDlpPath
 
         let overallStart = CFAbsoluteTimeGetCurrent()
         debugLog("Starting fetchVideoInfo for URL: \(url)", since: overallStart)
         debugLog("Using yt-dlp at: \(ytDlpPath.path)", since: overallStart)
 
+        var arguments = ["-J", "--no-warnings"]
+
+        // Add authentication if provided
+        if let username = username, !username.isEmpty,
+           let password = password, !password.isEmpty {
+            arguments.append(contentsOf: ["--username", username, "--password", password])
+        }
+
+        arguments.append(url)
+
         let result = try await processRunner.runAndCapture(
             executable: ytDlpPath,
-            arguments: ["-J", "--no-warnings", url]
+            arguments: arguments
         )
         debugLog("yt-dlp process completed", since: overallStart)
         debugLog("Exit code: \(result.exitCode)", since: overallStart)
@@ -63,10 +77,16 @@ class ClipService {
             "--external-downloader-args", "ffmpeg_i:-ss \(request.formattedStartTime) -to \(request.formattedEndTime)",
             "-f", "\(request.formatId)+bestaudio/\(request.formatId)",
             "--merge-output-format", "mp4",
-            "--newline",  // Output progress on new lines
-            "-o", request.outputURL.path,
-            request.url
+            "--newline"  // Output progress on new lines
         ]
+
+        // Add authentication if provided
+        if let username = request.username, !username.isEmpty,
+           let password = request.password, !password.isEmpty {
+            arguments.append(contentsOf: ["--username", username, "--password", password])
+        }
+
+        arguments.append(contentsOf: ["-o", request.outputURL.path, request.url])
 
         // Add re-encoding arguments if needed
         if request.reencode {
@@ -109,10 +129,16 @@ class ClipService {
             "--external-downloader", ffmpegPath.path,
             "--external-downloader-args", "ffmpeg_i:-ss \(request.formattedStartTime) -to \(request.formattedEndTime)",
             "-f", "\(request.formatId)+bestaudio/\(request.formatId)",
-            "--merge-output-format", "mp4",
-            "-o", request.outputURL.path,
-            request.url
+            "--merge-output-format", "mp4"
         ]
+
+        // Add authentication placeholder if credentials are provided (don't show actual password)
+        if let username = request.username, !username.isEmpty,
+           request.password != nil, !request.password!.isEmpty {
+            arguments.append(contentsOf: ["--username", username, "--password", "****"])
+        }
+
+        arguments.append(contentsOf: ["-o", request.outputURL.path, request.url])
 
         if request.reencode {
             arguments.insert(contentsOf: [
@@ -166,7 +192,15 @@ class ClipService {
         }
 
         let vcodec = json["vcodec"] as? String
-        let hasVideo = vcodec != nil && vcodec != "none"
+        let videoExt = json["video_ext"] as? String
+        let formatString = json["format"] as? String
+
+        // Determine if this format has video:
+        // 1. vcodec is present and not "none"
+        // 2. OR video_ext is present and not "none" (for Internet Archive, etc.)
+        let hasVideoFromVcodec = vcodec != nil && vcodec != "none"
+        let hasVideoFromExt = videoExt != nil && videoExt != "none"
+        let hasVideo = hasVideoFromVcodec || hasVideoFromExt
 
         // Skip audio-only formats for our purposes
         guard hasVideo else {
@@ -183,13 +217,16 @@ class ClipService {
         let acodec = json["acodec"] as? String
         let hasAudio = acodec != nil && acodec != "none"
 
+        // Determine codec: prefer vcodec, fall back to format string (for Internet Archive)
+        let codec = VideoCodec(from: vcodec, formatString: formatString)
+
         return VideoFormat(
             id: formatId,
             formatNote: json["format_note"] as? String,
             width: json["width"] as? Int,
             height: json["height"] as? Int,
             fps: json["fps"] as? Int,
-            codec: VideoCodec(from: vcodec),
+            codec: codec,
             videoBitrate: (json["vbr"] as? Double).map { Int($0) },
             filesize: json["filesize"] as? Int ?? json["filesize_approx"] as? Int,
             hasVideo: hasVideo,

@@ -134,25 +134,49 @@ enum VideoCodec: String, CaseIterable {
         self != .h264
     }
 
-    /// Initialize from yt-dlp vcodec string
-    init(from vcodec: String?) {
-        guard let vcodec = vcodec?.lowercased() else {
-            self = .unknown
-            return
+    /// Initialize from yt-dlp vcodec string, with optional format string fallback
+    /// The formatString is used for sources like Internet Archive that don't provide vcodec
+    init(from vcodec: String?, formatString: String? = nil) {
+        // Try vcodec first
+        if let vcodec = vcodec?.lowercased(), vcodec != "none" {
+            if vcodec.contains("avc") || vcodec.contains("h264") {
+                self = .h264
+                return
+            } else if vcodec.contains("hev") || vcodec.contains("h265") || vcodec.contains("hevc") {
+                self = .h265
+                return
+            } else if vcodec.contains("vp9") || vcodec.contains("vp09") {
+                self = .vp9
+                return
+            } else if vcodec.contains("vp8") {
+                self = .vp8
+                return
+            } else if vcodec.contains("av01") || vcodec.contains("av1") {
+                self = .av1
+                return
+            }
         }
 
-        if vcodec.contains("avc") || vcodec.contains("h264") {
-            self = .h264
-        } else if vcodec.contains("hev") || vcodec.contains("h265") || vcodec.contains("hevc") {
-            self = .h265
-        } else if vcodec.contains("vp9") || vcodec.contains("vp09") {
-            self = .vp9
-        } else if vcodec.contains("vp8") {
-            self = .vp8
-        } else if vcodec.contains("av01") || vcodec.contains("av1") {
-            self = .av1
-        } else {
-            self = .unknown
+        // Fall back to format string (e.g., "h.264" from Internet Archive)
+        if let format = formatString?.lowercased() {
+            if format.contains("h.264") || format.contains("h264") || format.contains("avc") {
+                self = .h264
+                return
+            } else if format.contains("h.265") || format.contains("h265") || format.contains("hevc") {
+                self = .h265
+                return
+            } else if format.contains("vp9") {
+                self = .vp9
+                return
+            } else if format.contains("vp8") {
+                self = .vp8
+                return
+            } else if format.contains("av1") {
+                self = .av1
+                return
+            }
         }
+
+        self = .unknown
     }
 }

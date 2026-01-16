@@ -18,6 +18,14 @@ class ClipViewModel: ObservableObject {
     @Published var selectedFormat: VideoFormat?
     @Published var outputURL: URL?
 
+    // MARK: - Vimeo credentials state
+    @Published var vimeoUsername: String = ""
+    @Published var vimeoPassword: String = ""
+    @Published var showVimeoCredentialsPrompt: Bool = false
+
+    private let defaults = UserDefaults.standard
+    private static let hasShownVimeoInfoKey = "hasShownVimeoCredentialsInfo"
+
     // MARK: - Video info state
     @Published var videoInfo: VideoInfo?
     @Published var isLoadingFormats: Bool = false
@@ -36,6 +44,15 @@ class ClipViewModel: ObservableObject {
     @Published var reencodeToH264: Bool = true
 
     // MARK: - Computed properties
+
+    /// Whether the current URL is a Vimeo URL
+    var isVimeoURL: Bool {
+        guard let url = URL(string: urlInput.trimmingCharacters(in: .whitespacesAndNewlines)),
+              let host = url.host?.lowercased() else {
+            return false
+        }
+        return host.contains("vimeo.com")
+    }
 
     /// Whether the selected format needs re-encoding
     var formatNeedsReencode: Bool {
@@ -110,7 +127,11 @@ class ClipViewModel: ObservableObject {
         consoleOutput = ""
 
         do {
-            let info = try await clipService.fetchVideoInfo(url: urlInput)
+            // Pass Vimeo credentials if this is a Vimeo URL and credentials are provided
+            let username: String? = isVimeoURL && !vimeoUsername.isEmpty ? vimeoUsername : nil
+            let password: String? = isVimeoURL && !vimeoPassword.isEmpty ? vimeoPassword : nil
+
+            let info = try await clipService.fetchVideoInfo(url: urlInput, username: username, password: password)
             videoInfo = info
 
             // Auto-select best format, preferring h264
@@ -130,6 +151,19 @@ class ClipViewModel: ObservableObject {
         }
 
         isLoadingFormats = false
+    }
+
+    /// Check if we should show the Vimeo credentials info prompt
+    func checkVimeoCredentialsPrompt() {
+        if isVimeoURL && !defaults.bool(forKey: Self.hasShownVimeoInfoKey) {
+            showVimeoCredentialsPrompt = true
+        }
+    }
+
+    /// Mark that the user has seen the Vimeo credentials info
+    func dismissVimeoCredentialsPrompt() {
+        defaults.set(true, forKey: Self.hasShownVimeoInfoKey)
+        showVimeoCredentialsPrompt = false
     }
 
     /// Show save panel and set output URL
@@ -159,13 +193,19 @@ class ClipViewModel: ObservableObject {
             return
         }
 
+        // Pass Vimeo credentials if this is a Vimeo URL
+        let username: String? = isVimeoURL && !vimeoUsername.isEmpty ? vimeoUsername : nil
+        let password: String? = isVimeoURL && !vimeoPassword.isEmpty ? vimeoPassword : nil
+
         let request = ClipRequest(
             url: urlInput,
             formatId: format.id,
             startTime: start,
             endTime: end,
             outputURL: output,
-            reencode: formatNeedsReencode && reencodeToH264
+            reencode: formatNeedsReencode && reencodeToH264,
+            username: username,
+            password: password
         )
 
         isProcessing = true
@@ -226,6 +266,8 @@ class ClipViewModel: ObservableObject {
         progress = 0
         progressMessage = ""
         consoleOutput = ""
+        vimeoUsername = ""
+        vimeoPassword = ""
     }
 
     // MARK: - Private helpers

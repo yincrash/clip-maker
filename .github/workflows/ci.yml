@@ -43,6 +43,9 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: Run Tests
+        env:
+          VIMEO_TEST_USERNAME: ${{ secrets.VIMEO_TEST_USERNAME }}
+          VIMEO_TEST_PASSWORD: ${{ secrets.VIMEO_TEST_PASSWORD }}
         run: |
           xcodebuild test \
             -project "yt-dlp Clip Maker/yt-dlp Clip Maker.xcodeproj" \

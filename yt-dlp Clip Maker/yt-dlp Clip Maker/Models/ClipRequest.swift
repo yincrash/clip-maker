@@ -8,6 +8,8 @@ struct ClipRequest {
     let endTime: TimeInterval
     let outputURL: URL
     let reencode: Bool
+    let username: String?
+    let password: String?
 
     /// Duration of the clip in seconds
     var duration: TimeInterval {

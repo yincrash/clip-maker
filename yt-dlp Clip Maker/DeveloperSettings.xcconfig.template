@@ -6,3 +6,7 @@ DEVELOPMENT_TEAM = YOUR_TEAM_ID_HERE
 
 // Code signing identity (use "Apple Development" for development, "Developer ID Application" for distribution)
 CODE_SIGN_IDENTITY = Apple Development
+
+// Vimeo test credentials (for integration tests)
+VIMEO_TEST_USERNAME =
+VIMEO_TEST_PASSWORD =
