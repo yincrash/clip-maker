@@ -15,11 +15,6 @@ import Foundation
 @MainActor
 struct VideoInfoIntegrationTests {
 
-    /// Whether we're running in a CI environment (GitHub Actions sets CI=true)
-    private var isRunningInCI: Bool {
-        ProcessInfo.processInfo.environment["CI"] == "true"
-    }
-
     /// Creates a ClipService configured to use system-installed binaries
     private func makeClipService() async -> ClipService {
         let dependencyManager = DependencyManager()
@@ -37,15 +32,11 @@ struct VideoInfoIntegrationTests {
     }
 
     // MARK: - YouTube
-    // Note: YouTube tests are skipped in CI because YouTube requires login from GitHub runners
+    // Note: YouTube tests are disabled in CI because YouTube requires login from GitHub runners
+    // The CI flag is set via SWIFT_ACTIVE_COMPILATION_CONDITIONS in the CI workflow
 
+#if !CI
     @Test func fetchYouTubeVideoInfo() async throws {
-        // Skip in CI - YouTube requires login from GitHub runners
-        if isRunningInCI {
-            print("Skipping YouTube test in CI environment")
-            return
-        }
-
         let clipService = await makeClipService()
 
         // Short, stable YouTube video (Big Buck Bunny trailer - public domain)
@@ -60,15 +51,7 @@ struct VideoInfoIntegrationTests {
         #expect(info.displayFormats.count > 0, "Video should have display formats")
     }
 
-    // MARK: - YouTube (short video)
-
     @Test func fetchYouTubeShortVideoInfo() async throws {
-        // Skip in CI - YouTube requires login from GitHub runners
-        if isRunningInCI {
-            print("Skipping YouTube test in CI environment")
-            return
-        }
-
         let clipService = await makeClipService()
 
         // Blender Foundation's Sintel trailer (public domain, stable)
@@ -82,15 +65,7 @@ struct VideoInfoIntegrationTests {
         #expect(!info.formats.isEmpty, "Video should have formats")
     }
 
-    // MARK: - YouTube (alternate video)
-
     @Test func fetchYouTubeLongVideoInfo() async throws {
-        // Skip in CI - YouTube requires login from GitHub runners
-        if isRunningInCI {
-            print("Skipping YouTube test in CI environment")
-            return
-        }
-
         let clipService = await makeClipService()
 
         // Big Buck Bunny full movie on YouTube (public domain)
@@ -103,6 +78,29 @@ struct VideoInfoIntegrationTests {
         #expect(info.duration > 0, "Video should have a duration")
         #expect(!info.formats.isEmpty, "Video should have formats")
     }
+
+    @Test func youTubeFormatsHaveExpectedProperties() async throws {
+        let clipService = await makeClipService()
+
+        let url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+
+        let info = try await clipService.fetchVideoInfo(url: url)
+        let displayFormats = info.displayFormats
+
+        #expect(displayFormats.count > 0, "Should have display formats")
+
+        // Check that formats have expected properties
+        for format in displayFormats {
+            #expect(format.hasVideo, "Display formats should have video")
+            #expect(format.height != nil, "Display formats should have height")
+            #expect(format.height! > 0, "Height should be positive")
+        }
+
+        // YouTube typically offers multiple resolutions
+        let heights = Set(displayFormats.compactMap { $0.height })
+        #expect(heights.count >= 2, "YouTube should offer multiple resolutions")
+    }
+#endif
 
     // MARK: - Internet Archive
 
@@ -126,21 +124,49 @@ struct VideoInfoIntegrationTests {
 
     // MARK: - Vimeo
 
+    /// Reads Vimeo credentials from DeveloperSettings.xcconfig file
+    private func getVimeoCredentials() -> (username: String, password: String)? {
+        let projectDir = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()  // Tests dir
+            .deletingLastPathComponent()  // yt-dlp Clip MakerTests
+        let xcconfigPath = projectDir.appendingPathComponent("DeveloperSettings.xcconfig")
+
+        guard let contents = try? String(contentsOf: xcconfigPath, encoding: .utf8) else {
+            return nil
+        }
+
+        var username: String?
+        var password: String?
+
+        for line in contents.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("VIMEO_TEST_USERNAME") {
+                username = trimmed.components(separatedBy: "=").last?.trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("VIMEO_TEST_PASSWORD") {
+                password = trimmed.components(separatedBy: "=").last?.trimmingCharacters(in: .whitespaces)
+            }
+        }
+
+        if let u = username, let p = password, !u.isEmpty, !p.isEmpty {
+            return (u, p)
+        }
+        return nil
+    }
+
     @Test func fetchVimeoVideoInfo() async throws {
-        // Get Vimeo credentials from environment variables
-        // Set these in your scheme or via: VIMEO_TEST_USERNAME=... VIMEO_TEST_PASSWORD=... xcodebuild test
-        guard let username = ProcessInfo.processInfo.environment["VIMEO_TEST_USERNAME"],
-              let password = ProcessInfo.processInfo.environment["VIMEO_TEST_PASSWORD"],
-              !username.isEmpty, !password.isEmpty else {
-            // Skip test if credentials not configured
-            print("Skipping Vimeo test: VIMEO_TEST_USERNAME and VIMEO_TEST_PASSWORD environment variables not set")
+        // Get Vimeo credentials from DeveloperSettings.xcconfig
+        guard let credentials = getVimeoCredentials() else {
+            #expect(Bool(false), "VIMEO_TEST_USERNAME and VIMEO_TEST_PASSWORD must be set in DeveloperSettings.xcconfig")
             return
         }
 
+        let username = credentials.username
+        let password = credentials.password
+
         let clipService = await makeClipService()
 
-        // A public Vimeo video that requires auth for yt-dlp
-        let url = "https://vimeo.com/148751763"
+        // Big Buck Bunny on Vimeo (public domain, stable)
+        let url = "https://vimeo.com/1084537"
 
         let info = try await clipService.fetchVideoInfo(url: url, username: username, password: password)
 
@@ -149,35 +175,5 @@ struct VideoInfoIntegrationTests {
         #expect(info.duration > 0, "Video should have a duration")
         #expect(!info.formats.isEmpty, "Video should have formats")
         #expect(info.displayFormats.count > 0, "Video should have display formats")
-    }
-
-    // MARK: - Format Validation
-
-    @Test func youTubeFormatsHaveExpectedProperties() async throws {
-        // Skip in CI - YouTube requires login from GitHub runners
-        if isRunningInCI {
-            print("Skipping YouTube test in CI environment")
-            return
-        }
-
-        let clipService = await makeClipService()
-
-        let url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
-
-        let info = try await clipService.fetchVideoInfo(url: url)
-        let displayFormats = info.displayFormats
-
-        #expect(displayFormats.count > 0, "Should have display formats")
-
-        // Check that formats have expected properties
-        for format in displayFormats {
-            #expect(format.hasVideo, "Display formats should have video")
-            #expect(format.height != nil, "Display formats should have height")
-            #expect(format.height! > 0, "Height should be positive")
-        }
-
-        // YouTube typically offers multiple resolutions
-        let heights = Set(displayFormats.compactMap { $0.height })
-        #expect(heights.count >= 2, "YouTube should offer multiple resolutions")
     }
 }

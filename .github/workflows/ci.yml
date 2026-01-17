@@ -24,11 +24,15 @@ jobs:
 
       - name: Create DeveloperSettings.xcconfig
         run: |
-          cat > "yt-dlp Clip Maker/DeveloperSettings.xcconfig" << 'EOF'
+          cat > "yt-dlp Clip Maker/DeveloperSettings.xcconfig" << EOF
           // CI build settings - no code signing
           DEVELOPMENT_TEAM =
           CODE_SIGN_IDENTITY = -
           CODE_SIGN_STYLE = Manual
+
+          // Vimeo test credentials (for integration tests)
+          VIMEO_TEST_USERNAME = ${{ secrets.VIMEO_TEST_USERNAME }}
+          VIMEO_TEST_PASSWORD = ${{ secrets.VIMEO_TEST_PASSWORD }}
           EOF
 
       - name: Build
@@ -43,9 +47,6 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: Run Tests
-        env:
-          VIMEO_TEST_USERNAME: ${{ secrets.VIMEO_TEST_USERNAME }}
-          VIMEO_TEST_PASSWORD: ${{ secrets.VIMEO_TEST_PASSWORD }}
         run: |
           xcodebuild test \
             -project "yt-dlp Clip Maker/yt-dlp Clip Maker.xcodeproj" \
@@ -54,7 +55,8 @@ jobs:
             -resultBundlePath ${{ runner.temp }}/TestResults.xcresult \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_ACTIVE_COMPILATION_CONDITIONS='DEBUG CI'
 
       - name: Upload Test Results
         if: failure()
