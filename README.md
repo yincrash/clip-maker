@@ -9,11 +9,11 @@ This app was created specifically for clipping long streams (VODs, livestream ar
 ## Screenshots
 
 <p align="center">
-  <img src="screenshots/app-video-loaded.png" alt="Video loaded with format selection and clip range" width="600">
+  <img src="screenshots/app-video-loaded.png" alt="Video loaded with format selection and clip range" width="600" style="border: 1px solid black;">
 </p>
 
 <p align="center">
-  <img src="screenshots/app-vimeo-credentials.png" alt="Vimeo URL with credentials input" width="600">
+  <img src="screenshots/app-vimeo-credentials.png" alt="Vimeo URL with credentials input" width="600" style="border: 1px solid black;">
 </p>
 
 ## Features
