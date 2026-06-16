@@ -57,6 +57,18 @@ struct SettingsView: View {
                 }
             }
 
+            // Warn when the build is stale enough that downloads may fail
+            if dependencyManager.isYtDlpOutdated {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text(ytDlpOutdatedNote)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
             // Show source switcher if both app and system versions are available
             if dependencyManager.hasAppYtDlp && dependencyManager.systemYtDlpPath != nil {
                 HStack(spacing: 12) {
@@ -189,6 +201,15 @@ struct SettingsView: View {
             Label(message, systemImage: "exclamationmark.triangle.fill")
                 .foregroundColor(.red)
         }
+    }
+
+    /// Guidance shown when yt-dlp is outdated, tailored to how it's installed.
+    private var ytDlpOutdatedNote: String {
+        let age = dependencyManager.ytDlpAgeDescription.map { "This build is \($0) old. " } ?? ""
+        let fix = dependencyManager.ytDlpSource == .systemPath
+            ? "Update it with `brew upgrade yt-dlp`."
+            : "Use “Re-download Dependencies” below to update."
+        return "\(age)Outdated versions of yt-dlp often fail to download from YouTube. \(fix)"
     }
 
     private func checkForUpdates() {
