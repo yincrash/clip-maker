@@ -182,66 +182,57 @@ class DependencyManager: ObservableObject {
             }
         }
 
-        // Check yt-dlp based on saved preference
-        if preferredYtDlpSource == "system", let systemPath = systemYtDlpPath {
-            // User previously chose system version
+        // Check yt-dlp based on saved preference. Every path must reach a terminal
+        // status: if the previously chosen "system" binary has since been removed,
+        // falling through without resetting leaves the UI stuck on "Checking...".
+        if preferredYtDlpSource == "system", let systemPath = systemYtDlpPath,
+           let version = await getVersion(for: systemPath) {
+            // User previously chose system version and it still works
+            ytDlpStatus = .installed(version: version, source: .systemPath)
+            activeYtDlpPath = systemPath
+        } else if pathFinder.fileExists(at: appYtDlpPath) {
+            // Check app bundle
+            if let version = await getVersion(for: appYtDlpPath) {
+                ytDlpStatus = .installed(version: version, source: .appBundle)
+                activeYtDlpPath = appYtDlpPath
+            } else {
+                ytDlpStatus = .error("Unable to get version")
+            }
+        } else if let systemPath = systemYtDlpPath {
+            // No app bundle, but a system version is available
             if let version = await getVersion(for: systemPath) {
-                ytDlpStatus = .installed(version: version, source: .systemPath)
-                activeYtDlpPath = systemPath
-            } else {
-                // System version no longer works, fall back to checking others
-                ytDlpStatus = .notInstalled
-            }
-        } else if preferredYtDlpSource == "app" || preferredYtDlpSource == nil {
-            // Check app bundle first
-            if pathFinder.fileExists(at: appYtDlpPath) {
-                if let version = await getVersion(for: appYtDlpPath) {
-                    ytDlpStatus = .installed(version: version, source: .appBundle)
-                    activeYtDlpPath = appYtDlpPath
-                } else {
-                    ytDlpStatus = .error("Unable to get version")
-                }
-            } else if let systemPath = systemYtDlpPath {
-                // No app bundle, but system is available
-                if let version = await getVersion(for: systemPath) {
-                    ytDlpStatus = .foundInPath(path: systemPath.path, version: version)
-                } else {
-                    ytDlpStatus = .notInstalled
-                }
+                ytDlpStatus = .foundInPath(path: systemPath.path, version: version)
             } else {
                 ytDlpStatus = .notInstalled
             }
+        } else {
+            ytDlpStatus = .notInstalled
         }
 
-        // Check ffmpeg based on saved preference
-        if preferredFfmpegSource == "system", let systemPath = systemFfmpegPath {
-            // User previously chose system version
+        // Check ffmpeg based on saved preference. Same terminal-status guarantee as
+        // yt-dlp above, so a removed system binary can't leave the UI stuck.
+        if preferredFfmpegSource == "system", let systemPath = systemFfmpegPath,
+           let version = await getFfmpegVersion(at: systemPath) {
+            // User previously chose system version and it still works
+            ffmpegStatus = .installed(version: version, source: .systemPath)
+            activeFfmpegPath = systemPath
+        } else if pathFinder.fileExists(at: appFfmpegPath) {
+            // Check app bundle
+            if let version = await getFfmpegVersion(at: appFfmpegPath) {
+                ffmpegStatus = .installed(version: version, source: .appBundle)
+                activeFfmpegPath = appFfmpegPath
+            } else {
+                ffmpegStatus = .error("Unable to get version")
+            }
+        } else if let systemPath = systemFfmpegPath {
+            // No app bundle, but a system version is available
             if let version = await getFfmpegVersion(at: systemPath) {
-                ffmpegStatus = .installed(version: version, source: .systemPath)
-                activeFfmpegPath = systemPath
-            } else {
-                // System version no longer works, fall back to checking others
-                ffmpegStatus = .notInstalled
-            }
-        } else if preferredFfmpegSource == "app" || preferredFfmpegSource == nil {
-            // Check app bundle first
-            if pathFinder.fileExists(at: appFfmpegPath) {
-                if let version = await getFfmpegVersion(at: appFfmpegPath) {
-                    ffmpegStatus = .installed(version: version, source: .appBundle)
-                    activeFfmpegPath = appFfmpegPath
-                } else {
-                    ffmpegStatus = .error("Unable to get version")
-                }
-            } else if let systemPath = systemFfmpegPath {
-                // No app bundle, but system is available
-                if let version = await getFfmpegVersion(at: systemPath) {
-                    ffmpegStatus = .foundInPath(path: systemPath.path, version: version)
-                } else {
-                    ffmpegStatus = .notInstalled
-                }
+                ffmpegStatus = .foundInPath(path: systemPath.path, version: version)
             } else {
                 ffmpegStatus = .notInstalled
             }
+        } else {
+            ffmpegStatus = .notInstalled
         }
     }
 
@@ -327,6 +318,24 @@ class DependencyManager: ObservableObject {
             return source
         }
         return nil
+    }
+
+    /// Active yt-dlp version string, if known (e.g. "2026.06.09").
+    var ytDlpVersion: String? {
+        ytDlpStatus.version
+    }
+
+    /// Whether the active yt-dlp build is old enough that downloads may start failing.
+    /// yt-dlp is date-versioned and YouTube frequently breaks older builds.
+    var isYtDlpOutdated: Bool {
+        guard let version = ytDlpVersion else { return false }
+        return YtDlpVersion.isOutdated(version)
+    }
+
+    /// Human-readable age of the active yt-dlp build (e.g. "3 months"), if known.
+    var ytDlpAgeDescription: String? {
+        guard let version = ytDlpVersion else { return nil }
+        return YtDlpVersion.ageDescription(for: version)
     }
 
     /// Download yt-dlp binary

@@ -36,7 +36,7 @@ struct MainView: View {
                 loadingView
             } else if dependencyManager.allDependenciesReady {
                 if let viewModel = viewModel {
-                    ContentView(viewModel: viewModel)
+                    ContentView(viewModel: viewModel, dependencyManager: dependencyManager)
                 } else {
                     loadingView
                 }

@@ -2,10 +2,14 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var viewModel: ClipViewModel
+    @ObservedObject var dependencyManager: DependencyManager
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                // Warn when yt-dlp is stale enough that downloads may fail
+                OutdatedYtDlpBanner(dependencyManager: dependencyManager)
+
                 // URL Input Section
                 urlInputSection
 
@@ -289,5 +293,5 @@ struct ContentView: View {
     // Set up some preview state
     viewModel.urlInput = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
-    return ContentView(viewModel: viewModel)
+    return ContentView(viewModel: viewModel, dependencyManager: dependencyManager)
 }
